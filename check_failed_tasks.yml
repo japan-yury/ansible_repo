@@ -1,0 +1,6 @@
+---
+- name: check_failed_tasks role
+  hosts: all
+  gather_facts: no
+  roles:
+    - check_failed_tasks
