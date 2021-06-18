@@ -1,0 +1,64 @@
+---
+# task file for roles/nis_add_clients
+- name: Setting a user for the following connection to a host
+  set_fact:
+    ansible_ssh_user: "{{ vault_user }}"
+
+- name: Setting a password for the user for the following connection to a host
+  set_fact:
+    ansible_ssh_pass: "{{ vault_password }}"
+  no_log: "{{ no_log_value }}"
+
+- name: Running the procedure for adding a local Repo on a host
+  include_tasks: add_local_repo.yml
+
+- name: Installing 'nis' package on CentOS or RHEL OSs
+  yum:
+    name: ypbind
+    state: present
+  register: via_yum
+  when: (centos == true) or
+        (rhel == true)
+
+- name: Installing 'nis' package on SUSE family
+  zypper:
+    name: nis
+    state: present
+    update_cache: yes
+  register: via_zypper
+  when: suse == true
+
+- name: Installing 'nis' package on Ubuntu
+  apt:
+    name: nis
+    state: present
+  register: via_apt
+  when: ubuntu == true
+
+- name: Setting a fact 'nis_client_package_installed_successfully' when NIS Client package has been installed if absent
+  set_fact:
+    nis_client_package_installed: true
+  when: (via_yum is succeeded) or
+        (via_zypper is succeeded) or
+        (via_apt is succeeded)
+
+- name: Unable to install NIS-client package on {{ inventory_hostname }}. Please check the connection from the host to any public repository and submit the procedure again.
+  fail:
+    msg: "Unable to install NIS-client package on {{ inventory_hostname }}. Please check the connection from the host to any public repository and submit the procedure again."
+  when: ((via_yum.msg is defined and "'No package matching' in via_yum.msg") or
+        (via_zypper.msg is defined and "'No package matching' in via_zypper.msg") or
+        (via_apt.msg is defined and "'No package matching' in via_apt.msg")) or
+        ((via_yum.msg is defined and "'There are unfinished transactions' in via_yum.msg") or
+        (via_zypper.msg is defined and "'There are unfinished transactions' in via_zypper.msg") or
+        (via_apt.msg is defined and "'There are unfinished transactions' in via_apt.msg"))
+
+- name: Reverting the configuration set to point to a local repository
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+     - /etc/yum.repos.d/dell-rhel6.repo
+     - /etc/yum.repos.d/dell-rhel7.repo
+     - /etc/yum.repos.d/AppStream.repo
+     - /etc/yum.repos.d/BaseOS.repo
+     - /etc/zypp/repos.d/dell-sles12.repo

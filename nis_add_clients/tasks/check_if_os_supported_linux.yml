@@ -1,0 +1,235 @@
+---
+- name: Setting a user for the following connection to a host
+  set_fact:
+    ansible_ssh_user: "{{ vault_user }}"
+
+- name: Setting a password for the user for the following connection to a host
+  set_fact:
+    ansible_ssh_pass: "{{ vault_password }}"
+  no_log: "{{ no_log_value }}"
+
+- name: Checking what version of Linux is it with /etc/*release
+  raw: cat /etc/*release | grep 'NAME="'
+  ignore_errors: yes
+  register: os_name_1
+
+- name: Unable to verify the OS name for {{ inventory_hostname }}. We may not be supporting this OS, please visit this page for reference https://confluence.cec.lab.emc.com:8443/x/0O5PCg
+  fail:
+    msg: "Unable to verify the OS name for {{ inventory_hostname }}. We may not be supporting this OS, please visit this page for reference https://confluence.cec.lab.emc.com:8443/x/0O5PCg"
+  when:
+    - os_name_1.failed == false
+    - os_name_1 is defined
+    - "'Unknown command' in os_name_1.stdout"
+
+- name: Removing the characters not related to Linux OS name
+  set_fact:
+    os_name: "{{ os_name_1 }}"
+  when: 
+    - os_name_1.failed == false
+    - os_name_1 is defined
+
+- name: Could not read /etc/os-release
+  debug:
+    msg: "Could not read /etc/os-release on {{ inventory_hostname }} trying hostnamectl"
+  when: os_name_1 is failed
+
+- name: Checking what version of Linux is it using hostnamectl
+  raw: hostnamectl | grep 'Operating System:'
+  ignore_errors: yes
+  when: os_name_1 is failed
+  register: os_name_2
+
+- name: Checking what version of Linux is it with lsb_release approach
+  raw: lsb_release -a | grep 'Description:' || grep -i linux /etc/*release
+  ignore_errors: yes
+  when: os_name_2 is failed
+  register: os_name_3
+
+- name: Message out when can't get the OS name
+  fail:
+    msg: "Failed to determine is OS Linux"
+  when:
+    - os_name is undefined
+    - os_name_2 is undefined
+    - os_name_3 is undefined
+
+- name: Installing python
+  become: true
+  block:
+    - name: Printing the OS version with /etc/*release
+      debug:
+        msg: "Printing trimmed OS name: {{ os_name.stdout_lines[0] | regex_replace('^NAME=') }}"
+
+    - name: Removing the characters not related to Linux OS name
+      set_fact:
+        trimmed_os_name: "{{ os_name.stdout_lines[0] | regex_replace('^NAME=') | regex_replace('\"')}}"
+
+    - name: Removing the characters not related to Linux OS name to determine OS version
+      set_fact:
+        trimmed_os_pretty_name: "{{ os_name.stdout_lines[1] | regex_replace('^PRETTY_NAME=') | regex_replace('\"')}}"
+      when: os_name.stdout_lines[1] is defined
+
+    - name: Check is OS release supported
+      set_fact:
+        os_supported: true
+      when: trimmed_os_name is defined
+
+    - name: Setting package manager for Linux OS (If FAILED, unable to set package manager because we do not support this OS)
+      set_fact:
+        package_manager: "{{ os[trimmed_os_name]['package_manager'] }}"
+      when: os_supported == true
+
+    - name: Setting a local repository link for Linux OS (If FAILED, unable to set package manager because we do not support this OS)
+      set_fact:
+        repo_link: "{{ os[trimmed_os_pretty_name]['repo_link'] }}"
+      when: 
+        - trimmed_os_pretty_name is defined
+        - os[trimmed_os_pretty_name]['repo_link'] is defined
+
+    ### Setting AppStream repository for RHEL 8 ###
+    - name: Setting a local repository second link for Linux OS (If FAILED, unable to set package manager because we do not support this OS)
+      set_fact:
+        repo_link2: "{{ os[trimmed_os_pretty_name]['repo_link2'] }}"
+      when: 
+         - trimmed_os_pretty_name is defined
+         - os[trimmed_os_pretty_name]['repo_link2'] is defined
+      
+    - name: Installing python (If FAILED, the reason is insufficient privileges of the user '{{ vault_user }}'. Please use root privileged user.)
+      raw: test -e /usr/bin/python || test -e /usr/bin/python3 || ( "{{ package_manager }}" update -y && "{{ package_manager }}" install -y python)
+      register: python_installation
+
+    - name: Message out when python installation is finished
+      debug:
+        msg: "Python installation is finished with message: {{ python_installation }}"
+  when: os_name is defined
+
+  rescue:
+    - name: Installing python3 from local repo
+      include_tasks: install_python_from_local_repo.yml
+
+- name: Installing python second approach
+  become: true
+  block:
+    - name: Printing the OS version using hostnamectl
+      debug:
+        msg: "Printing OS name: {{ os_name_2.stdout_lines[0] | regex_replace('^.*Operating System: ')}}"
+ 
+    - name: Removing the characters not related to Linux OS name
+      set_fact:
+        os_name_via_hostnamectl: "{{ os_name_2.stdout_lines[0] | regex_replace('^.*Operating System: ')}}"
+
+    - name: Check is OS release supported
+      set_fact:
+        os_supported: true
+      when: os_name_via_hostnamectl is defined
+
+    - name: Setting package manager for Linux OS (If FAILED, unable to set package manager because we do not support this OS)
+      set_fact:
+        package_manager: "{{ os[os_name_via_hostnamectl]['package_manager'] }}"
+      when: os_supported == true
+
+    - name: Setting a local repository link for Linux OS (If FAILED, unable to set package manager because we do not support this OS)
+      set_fact:
+        repo_link: "{{ os[os_name_via_hostnamectl]['repo_link'] }}"
+      when: 
+        - os_name_via_hostnamectl is defined
+        - os[os_name_via_hostnamectl]['repo_link'] is defined
+
+    - name: Install python (If FAILED, the reason is insufficient privileges of the user '{{ vault_user }}'. Please use root privileged user.)
+      raw: test -e /usr/bin/python || test -e /usr/bin/python3 || ( "{{ package_manager }}" update -y && "{{ package_manager }}" install -y python)
+      register: python_installation
+
+    - name: Message out when python installation is finished
+      debug:
+        msg: "Python installation is finished with message: {{ python_installation }}"
+  when: 
+    - os_name is undefined
+    - os_name_2 is defined
+    - os_name_2 is succeeded
+
+  rescue:
+    - name: Installing python3 from local repo
+      include_tasks: install_python_from_local_repo.yml
+
+- name: Installing python third approach
+  become: true
+  block:
+    - name: Printing the OS version using lsb_release
+      debug:
+        msg: "Printing OS name: {{ os_name_3.stdout_lines[0] | regex_replace('^.*Description:\t')}}"
+
+    - name: Removing the characters not related to Linux OS name
+      set_fact:
+        os_name_other: "{{ os_name_3.stdout_lines[0] | regex_replace('^.*Description:\t') }}"
+
+    - name: Removing the characters not related to Linux OS name (second approach)
+      set_fact:
+        os_name_other: "{{ os_name_3.stdout_lines[1] | default(os_name_3.stdout_lines[0]) | regex_replace('^.*Description:\t') }}"
+
+    - name: Check is OS release supported
+      set_fact:
+        os_supported: true
+      when: os_name_other is defined
+
+    - name: Setting package manager for Linux OS (If FAILED, unable to set package manager because we do not support this OS)
+      set_fact:
+        package_manager: "{{ os[os_name_other]['package_manager'] }}"
+      when: os_supported == true
+
+    - name: Setting a local repository link for Linux OS (If FAILED, unable to set package manager because we do not support this OS)
+      set_fact:
+        repo_link: "{{ os[os_name_other]['repo_link'] }}"
+      when: 
+        - os_name_other is defined
+        - os[os_name_other]['repo_link'] is defined
+
+    - name: Install python (If FAILED, the reason is insufficient privileges of the user '{{ vault_user }}'. Please use root privileged user.)
+      raw: test -e /usr/bin/python || test -e /usr/bin/python3 || ( "{{ package_manager }}" update -y && "{{ package_manager }}" install -y python)
+      register: python_installation
+
+    - name: Message out when python installation is finished
+      debug:
+        msg: "Python installation is finished with message: {{ python_installation }}"
+  when:
+    - os_name_1 is failed
+    - os_name_2 is failed
+
+  rescue:
+    - name: Installing python3 from local repo
+      include_tasks: install_python_from_local_repo.yml
+
+# Setting a fact for each OS family
+- name: Setting fact 'centos=true' when condition met
+  set_fact:
+    centos: true
+  when: (trimmed_os_name is defined and os[trimmed_os_name]['os_family'] == 'centos') or
+        (os_name_via_hostnamectl is defined and os[os_name_via_hostnamectl]['os_family'] == 'centos') or
+        (os_name_other is defined and os[os_name_other]['os_family'] == 'centos')
+
+- name: Setting fact 'rhel=true' when condition met
+  set_fact:
+    rhel: true
+  when: (trimmed_os_name is defined and (os[trimmed_os_name]['os_family'] == 'rhel' or os[trimmed_os_name]['os_family'] == 'rhel_5' or os[trimmed_os_name]['os_family'] == 'rhel_6' or os[trimmed_os_name]['os_family'] == 'rhel_7' or os[trimmed_os_name]['os_family'] == 'rhel_8')) or
+        (os_name_via_hostnamectl is defined and (os[os_name_via_hostnamectl]['os_family'] == 'rhel' or os[os_name_via_hostnamectl]['os_family'] == 'rhel_5' or os[os_name_via_hostnamectl]['os_family'] == 'rhel_6' or os[os_name_via_hostnamectl]['os_family'] == 'rhel_7' or os[os_name_via_hostnamectl]['os_family'] == 'rhel_8')) or
+        (os_name_other is defined and (os[os_name_other]['os_family'] == 'rhel' or os[os_name_other]['os_family'] == 'rhel_5' or os[os_name_other]['os_family'] == 'rhel_6' or os[os_name_other]['os_family'] == 'rhel_7' or os[os_name_other]['os_family'] == 'rhel_8'))
+
+- name: Setting fact 'ubuntu=true' when condition met
+  set_fact:
+    ubuntu: true
+  when: (trimmed_os_name is defined and os[trimmed_os_name]['os_family'] == 'ubuntu') or
+        (os_name_via_hostnamectl is defined and os[os_name_via_hostnamectl]['os_family'] == 'ubuntu') or
+        (os_name_other is defined and os[os_name_other]['os_family'] == 'ubuntu')
+
+- name: Setting fact 'sles=true' when condition met
+  set_fact:
+    suse: true
+  when: (trimmed_os_name is defined and (os[trimmed_os_name]['os_family'] == 'suse' or os[trimmed_os_name]['os_family'] == 'suse_10' or os[trimmed_os_name]['os_family'] == 'suse_11' or os[trimmed_os_name]['os_family'] == 'suse_12')) or
+        (os_name_via_hostnamectl is defined and (os[os_name_via_hostnamectl]['os_family'] == 'suse' or os[os_name_via_hostnamectl]['os_family'] == 'suse_10' or os[os_name_via_hostnamectl]['os_family'] == 'suse_11' or os[os_name_via_hostnamectl]['os_family'] == 'suse_12')) or
+        (os_name_other is defined and (os[os_name_other]['os_family'] == 'suse' or os[os_name_other]['os_family'] == 'suse_10' or os[os_name_other]['os_family'] == 'suse_11' or os[os_name_other]['os_family'] == 'suse_12'))
+
+- name: Setting fact 'other_os' when condition for the following OSs met - CentOS, RHEL, SLES
+  set_fact:
+    other_os: true
+  when: (trimmed_os_name is defined and os[trimmed_os_name]['os_family'] != 'ubuntu') or
+        (os_name_via_hostnamectl is defined and os[os_name_via_hostnamectl]['os_family'] != 'ubuntu') or
+        (os_name_other is defined and os[os_name_other]['os_family'] != 'ubuntu')
