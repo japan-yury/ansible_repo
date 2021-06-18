@@ -1,0 +1,23 @@
+---
+# Windows Update & Windows Checker
+pswindows_module: false
+win_updates_levels_all: false
+win_updates_levels: "{{ win_updates_categories }}"
+template_to_schedule: 145
+inventory_id: 100
+java_timeout: "{{ windows_update_end_time }}"
+timeout_reached: false
+task_name: SSMO_Revert_registry_settings
+bat_path_for_revert: C:\script\Revert_settings.bat
+reboot_required: false
+all_updates_installed: false
+registry_remove_after_update: false
+available_updates_fail: false
+remaining_updates_fail: false
+windows_data_center: false
+wsus_registry_set: false
+update_is_running: no
+# Common
+JWT: undefined
+no_log_value: true
+local_admin: Administrator

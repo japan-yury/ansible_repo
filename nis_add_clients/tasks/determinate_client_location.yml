@@ -1,0 +1,152 @@
+---
+- name: Trying to find a host path in Vault
+  block:
+    - name: Trying to find a host path in Vault (first approach)
+      uri:
+        url: "{{ api_url_path }}"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        body: "\"{{ inventory_hostname }}\""
+        status_code: 200
+        validate_certs: no
+      delegate_to: localhost
+      register: api_output_client
+      until: api_output_client.status == 200 and (api_output_client.json is search("DRI*"))
+      retries: 5
+      delay: 5
+
+    - name: Message out the information about Location of the host extracted from ESM
+      debug:
+        msg: Location is "{{ api_output_client.json[inventory_hostname] }}"
+
+    - name: Setting information about Location of the host extracted from Vault
+      set_fact:
+        location: "{{ api_output_client[\"json\"][inventory_hostname].split('/')[1] }}"
+      when: (api_output_client.failed != true) and
+            ("'DRI' in api_output_client.json[inventory_hostname]" and "api_output_client.json[inventory_hostname] is defined") and
+            (api_output_client.json[inventory_hostname] != "")
+
+    - name: Determine the NIS Server location and matching it with a list to set as a fact 'nis_server_location'
+      set_fact:
+        nis_server_location: "{{ nis_servers[location] }}"
+      register: set_fact_status
+      when: location is defined and nis_servers is defined
+
+    - name: Determine the NIS Server location and matching it with a list to set as a fact 'nis_server_domain'
+      set_fact:
+        nis_server_domain: "{{ nis_server_location['domain'] }}"
+      register: set_fact_status
+      when: nis_server_location is defined and nis_server_location['domain'] is defined
+
+    - name: Getting 'nis_server1_fqhn' value from nis_server_location
+      set_fact:
+        nis_server1_fqhn: "{{ nis_server_location['server1']['fqhn'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'nis_server2_fqhn' value from nis_server_location
+      set_fact:
+        nis_server2_fqhn: "{{ nis_server_location['server2']['fqhn'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'dns_primary' value from nis_server_location
+      set_fact:
+        dns_primary: "{{ nis_server_location['dns']['primary'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'dns_secondary' value from nis_server_location
+      set_fact:
+        dns_secondary: "{{ nis_server_location['dns']['secondary'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'ntp_primary' value from nis_server_location
+      set_fact:
+        ntp_primary: "{{ nis_server_location['ntp']['primary'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'ntp_secondary' value from nis_server_location
+      set_fact:
+        ntp_secondary: "{{ nis_server_location['ntp']['secondary'] }}"
+      when: nis_server_location is defined
+
+    - name: Message out when could not identify the Client Location
+      fail:
+        msg: Cannot identify the Location for {{ inventory_hostname }} host"
+      when: (nis_server_location is undefined and location is undefined) or
+            (api_output_client is failed)
+  rescue:
+    - name: Trying to find a host path in Vault (second approach)
+      uri:
+        url: "{{ api_url_path }}"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        body: "\"{{ inventory_hostname }}\""
+        status_code: 200
+        validate_certs: no
+      delegate_to: localhost
+      ignore_errors: yes
+      register: api_output_client
+      until: api_output_client.status == 200 and (api_output_client.json is search("DRI*"))
+      retries: 5
+      delay: 5
+      when: (api_output_client.json[inventory_hostname] == "")
+
+    - name: Message out the information about Location of the host extracted from ESM
+      debug:
+        msg: Location is "{{ api_output_client.json[inventory_hostname] }}"
+
+    - name: Setting information about Location of the host extracted from Vault
+      set_fact:
+        location: "{{ api_output_client[\"json\"][inventory_hostname].split('/')[1] }}"
+      when: (api_output_client.failed != true) and
+            ("'DRI' in api_output_client.json[inventory_hostname]" and "api_output_client.json[inventory_hostname] is defined") and
+            (api_output_client.json[inventory_hostname] != "")
+
+    - name: Determine the NIS Server location and matching it with a list to set as a fact 'nis_server_location'
+      set_fact:
+        nis_server_location: "{{ nis_servers[location] }}"
+      register: set_fact_status
+      when: location is defined and nis_servers is defined
+
+    - name: Determine the NIS Server location and matching it with a list to set as a fact 'nis_server_domain'
+      set_fact:
+        nis_server_domain: "{{ nis_server_location['domain'] }}"
+      register: set_fact_status
+      when: nis_server_location is defined and nis_server_location['domain'] is defined
+
+    - name: Getting 'nis_server1_fqhn' value from nis_server_location
+      set_fact:
+        nis_server1_fqhn: "{{ nis_server_location['server1']['fqhn'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'nis_server2_fqhn' value from nis_server_location
+      set_fact:
+        nis_server2_fqhn: "{{ nis_server_location['server2']['fqhn'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'dns_primary' value from nis_server_location
+      set_fact:
+        dns_primary: "{{ nis_server_location['dns']['primary'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'dns_secondary' value from nis_server_location
+      set_fact:
+        dns_secondary: "{{ nis_server_location['dns']['secondary'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'ntp_primary' value from nis_server_location
+      set_fact:
+        ntp_primary: "{{ nis_server_location['ntp']['primary'] }}"
+      when: nis_server_location is defined
+
+    - name: Getting 'ntp_secondary' value from nis_server_location
+      set_fact:
+        ntp_secondary: "{{ nis_server_location['ntp']['secondary'] }}"
+      when: nis_server_location is defined
+
+    - name: Message out when could not identify the Client Location
+      fail:
+        msg: Cannot identify the Location for {{ inventory_hostname }} host"
+      when: (nis_server_location is undefined and location is undefined) or
+            (api_output_client is failed)

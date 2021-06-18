@@ -1,0 +1,536 @@
+---
+# main file under vars for roles/nis_add_clients
+os:
+  CentOS Linux:
+    package_manager: yum
+    os_family: centos
+  CentOS release 6.4 (Final):
+    package_manager: yum
+    os_family: centos
+  CentOS release 6.7 (Final):
+    package_manager: yum
+    os_family: centos
+  CentOS release 6.8 (Final):
+    package_manager: yum
+    os_family: centos
+  CentOS release 6.9 (Final):
+    package_manager: yum
+    os_family: centos
+  CentOS release 6.10 (Final):
+    package_manager: yum
+    os_family: centos
+  CentOS Linux 7 (Core):
+    package_manager: yum
+    os_family: centos
+  Red Hat Enterprise Linux:
+    package_manager: yum
+    os_family: rhel
+  Red Hat Enterprise Linux Server:
+    package_manager: yum
+    os_family: rhel
+  Red Hat Enterprise Linux Server release 5.2 (Tikanga):
+    package_manager: yum
+    os_family: rhel_5
+  Red Hat Enterprise Linux Server release 5.6 (Tikanga):
+    package_manager: yum
+    os_family: rhel_5
+  Red Hat Enterprise Linux Server release 6.0 (Santiago):
+    package_manager: yum
+    os_family: rhel_6
+    repo_link: pub/redhat/RHEL6/dell-rpm.repo
+  Red Hat Enterprise Linux Server release 6.5 (Santiago):
+    package_manager: yum
+    os_family: rhel_6
+    repo_link: pub/redhat/RHEL6/dell-rpm.repo
+  Red Hat Enterprise Linux Server release 6.6 (Santiago):
+    package_manager: yum
+    os_family: rhel_6
+    repo_link: pub/redhat/RHEL6/dell-rpm.repo
+  Red Hat Enterprise Linux Server release 6.7 (Santiago):
+    package_manager: yum
+    os_family: rhel_6
+    repo_link: pub/redhat/RHEL6/dell-rpm.repo
+  Red Hat Enterprise Linux Server release 6.8 (Santiago):
+    package_manager: yum
+    os_family: rhel_6
+    repo_link: pub/redhat/RHEL6/dell-rpm.repo
+  Red Hat Enterprise Linux Server release 6.9 (Santiago):
+    package_manager: yum
+    os_family: rhel_6
+    repo_link: pub/redhat/RHEL6/dell-rpm.repo
+  Red Hat Enterprise Linux Server release 6.10 (Santiago):
+    package_manager: yum
+    os_family: rhel_6
+    repo_link: pub/redhat/RHEL6/dell-rpm.repo
+  Red Hat Enterprise Linux Server 7.2 (Maipo):
+    package_manager: yum
+    os_family: rhel_7
+    repo_link: pub/redhat/RHEL7/dell-rpm.repo
+  Red Hat Enterprise Linux 8.0 (Ootpa):
+    package_manager: yum
+    os_family: rhel_8
+    repo_link: pub/Distros/RedHat/RHEL8/8.0/BaseOS/x86_64/os/
+    repo_link2: pub/Distros/RedHat/RHEL8/8.0/AppStream/x86_64/os/
+  Ubuntu:
+    package_manager: apt
+    os_family: ubuntu
+  Ubuntu 14.04.4 LTS:
+    package_manager: apt
+    os_family: ubuntu
+  Ubuntu 16.04.6 LTS:
+    package_manager: apt
+    os_family: ubuntu
+  SLES:
+    package_manager: zypper
+    os_family: suse
+  SUSE Linux Enterprise Server:
+    package_manager: zypper
+    os_family: suse
+  SUSE Linux Enterprise Server 10 (i586):
+    package_manager: zypper
+    os_family: suse_10
+  SUSE Linux Enterprise Server 11 (i586):
+    package_manager: zypper
+    os_family: suse_11
+  SUSE Linux Enterprise Server 11 (x86_64):
+    package_manager: zypper
+    os_family: suse_11
+  SUSE Linux Enterprise Server 12 SP3:
+    package_manager: zypper
+    os_family: suse_12
+    repo_link: pub/suse/sles/12/dell-sles12.repo
+  openSUSE Leap:
+    package_manager: zypper
+    os_family: suse
+  openSUSE Leap 15.0:
+    package_manager: zypper
+    os_family: suse
+  openSUSE Leap 42.3:
+    package_manager: zypper
+    os_family: suse
+
+nis_servers:
+  Cork:
+    domain: cork
+    server1:
+      fqhn: nscorka01.isus.emc.com
+      ip: 10.41.240.78
+    server2:
+      fqhn: nscorkb01.isus.emc.com
+      ip: 10.41.240.79
+    dns:
+      primary: 10.60.131.110
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Russia St Petersburg:
+    domain: coe
+    server1:
+      fqhn: nisplrus01.isus.emc.com
+      ip: 152.62.136.119
+    server2:
+      fqhn: nisplrus02.isus.emc.com
+      ip: 152.62.136.120
+    dns:
+      primary: 10.60.131.110
+      secondary: 10.228.254.66
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Glil Yam Israel:
+    domain: ca
+    server1:
+      fqhn: nisplcair01.isus.emc.com
+      ip: 10.140.193.23
+    server2:
+      fqhn: nisplcair02.isus.emc.com
+      ip: 10.140.193.23
+    dns:
+      primary: 10.60.131.110
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  #Same IPs as for another Israel location above
+  Herzliya Israel:
+    domain: ca
+    server1:
+      fqhn: nisplcair01.isus.emc.com
+      ip: 10.140.193.23
+    server2:
+      fqhn: nisplcair02.isus.emc.com
+      ip: 10.140.193.23
+    dns:
+      primary: 10.60.131.110
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Beijing:
+    domain: coe
+    server1:
+      fqhn: nisplbjg01.isus.emc.com
+      ip: 10.86.157.90
+    server2:
+      fqhn: nisplbjg02.isus.emc.com
+      ip: 10.86.157.91
+    dns:
+      primary: 10.118.225.100
+      secondary: 10.228.254.66
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Research Triangle Park:
+    domain: rtp
+    server1:
+      fqhn: nisplrtpnc01.isus.emc.com
+      ip: 128.222.58.51
+    server2:
+      fqhn: nisplrtpnc02.isus.emc.com
+      ip: 128.222.58.52
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Durham:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Bangalore Development Center:
+    domain: India
+    server1:
+      fqhn: nisblrprd01.isus.emc.com
+      ip: 10.77.138.54
+    server2:
+      fqhn: nisblrprd02.isus.emc.com
+      ip: 10.77.138.56
+    dns:
+      primary: 10.118.225.100
+      secondary: 10.228.254.66
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Shanghai:
+    domain: coe
+    server1:
+      fqhn: nissngprd01.isus.emc.com
+      ip: 10.44.2.64
+    server2:
+      fqhn: nissngprd02.isus.emc.com
+      ip: 10.44.2.65
+    dns:
+      primary: 10.118.225.100
+      secondary: 10.228.254.66
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  #Same IPs as for another China location above
+  Shanghai Software Lab:
+    domain: coe
+    server1:
+      fqhn: nissngprd01.isus.emc.com
+      ip: 10.44.2.64
+    server2:
+      fqhn: nissngprd02.isus.emc.com
+      ip: 10.44.2.65
+    dns:
+      primary: 10.118.225.100
+      secondary: 10.228.254.66
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  #Same IPs as for another China location above
+  a:
+    domain: India
+    server1:
+      fqhn: nisblrprd01.isus.emc.com
+      ip: 10.77.138.54
+    server2:
+      fqhn: nisblrprd02.isus.emc.com
+      ip: 10.77.138.56
+    dns:
+      primary: 10.118.225.100
+      secondary: 10.228.254.66
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  #####
+  # Adding the rest of the location here
+  #####
+  171 Hopkinton:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  176 Hopkinton:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  228 Hopkinton:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Austin Development Center:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Edmonton:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Franklin Mass:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Irvine:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Louisville Co:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Minnesota Development Center Eden Prairie:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Montreal:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Nashua Development Center:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Paris:
+    domain: cork
+    server1:
+      fqhn: nscorka01.isus.emc.com
+      ip: 10.41.240.78
+    server2:
+      fqhn: nscorkb01.isus.emc.com
+      ip: 10.41.240.79
+    dns:
+      primary: 10.60.131.110
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Plymouth Minn:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Richardson Texas:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Seattle WA:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Silicon Valley Design Center:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  Taipei Development Center:
+    domain: coe
+    server1:
+      fqhn: nissngprd01.isus.emc.com
+      ip: 10.44.2.64
+    server2:
+      fqhn: nissngprd02.isus.emc.com
+      ip: 10.44.2.65
+    dns:
+      primary: 10.118.225.100
+      secondary: 10.228.254.66
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  durham+4121:
+    domain: durham
+    server1:
+      fqhn: nsdrm-vip.isus.emc.com
+      ip: 10.106.228.237
+    dns:
+      primary: 10.228.254.66
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+  ottawa:
+    domain: cork
+    server1:
+      fqhn: nscorka01.isus.emc.com
+      ip: 10.41.240.78
+    server2:
+      fqhn: nscorkb01.isus.emc.com
+      ip: 10.41.240.79
+    dns:
+      primary: 10.60.131.110
+      secondary: 10.244.53.108
+    ntp:
+      primary: 10.254.225.252
+      secondary: 10.104.0.254
+
+new_store: /store/isg-admin
+store: rize error
+
+fail_message:
+
+vault_hostname: "https://vault.query.pams.cec.lab.emc.com"
+sms_vault: "http://vault-service"
+awx_hostname: "https://awx.dri-k8s.cec.lab.emc.com"
+java_endpoint_hostname: "http://sms"
+
+no_log_value: true
+
+isg_user: "{{ lookup('hashi_vault', 'secret='+new_store+':username token={{ vault_token }} url={{ vault_hostname }}:443 validate_certs=False')}}"
+isg_password: "{{ lookup('hashi_vault', 'secret='+new_store+':password token={{ vault_token }} url={{ vault_hostname }}:443 validate_certs=False')}}"
+api_url: "{{ sms_vault }}/credential/{{ inventory_hostname }}/?idType=IP"
+api_url_path: "{{ sms_vault }}/util/resolve_ip"
+api_url_credential: "{{ sms_vault }}/credential"
+
+isg_token: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          61363464613638373336353661653034363432343733666362653430646436333835646165346232
+          3634663331316465643865623235303866383264636132350a313238313061633565393534313038
+          66306632643830643861313637323834306431626539386461353235393635656536636330343063
+          6362643238346535660a373334303533613666393137656639346661393739646464653633353132
+          31663337326435393763353163633063616436666165303662303366396138626137
+
+vault_token: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          39636264353765616339313631393938376139363735393034356138323735396666336263333164
+          3666316236313564336330363536343435323030333934620a376261306531323865613539613663
+          33623537626434666434383530643161386462353737333963326166356131323831626434646630
+          3337373034316137650a646165333435386631616239636231313166626566306664336539336435
+          31333334303732333935323032393337366235306230383633343763623332383839
+
+os_is_windows: false
+os_is_linux: false
+os_is_esxi: false
+os_supported: false
+trimmed_os_pretty_name: "{{ os_name.stdout_lines[0] }}"
+centos: false
+rhel: false
+ubuntu: false
+suse: false
+other_os: false
+nis_client_package_installed: false
+nis_client_running: false
+
+local_repo_hostname: http://linuxlib.us.dell.com

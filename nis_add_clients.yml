@@ -1,0 +1,6 @@
+---
+- name: nis_add_clients role
+  hosts: all
+  gather_facts: no
+  roles:
+    - nis_add_clients

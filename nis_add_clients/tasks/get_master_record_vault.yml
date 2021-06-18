@@ -1,0 +1,31 @@
+---
+- name: Trying to find a host path in Vault
+  uri:
+    url: "{{ api_url_path }}"
+    method: POST
+    headers:
+      Content-Type: "application/json"
+    body: "\"{{ inventory_hostname }}\""
+    status_code: 200 
+    validate_certs: no
+  retries: 5
+  delay: 5
+  delegate_to: localhost
+  register: api_output
+  until: api_output.status == 200 and (api_output.json is search("DRI*"))
+
+- name: Setting a host path found in Vault
+  set_fact:
+    store: "{{ api_output[\"json\"][inventory_hostname] }}"
+
+- name: Encoding a host path found in Vault
+  set_fact:
+    store: "{{ store | regex_replace(' ', '%20') }}"
+
+- name: Setting a path for master's record of isg-admin secret in Vault for a particular Lab
+  set_fact:
+    new_store: "{{ store | regex_replace('/[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}$', '/isg-admin') }}"
+
+- name: Encoding a path for master's record of isg-admin secret in Vault for a particular Lab
+  set_fact:
+    store: "{{ store | regex_replace('/', '%2F') }}"
