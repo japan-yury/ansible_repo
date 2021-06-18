@@ -13,4 +13,3 @@ Example Playbook
   vars:
   roles:
     - check_failed_tasks
-
