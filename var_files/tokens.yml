@@ -1,6 +1,0 @@
----
-awx_api_token: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

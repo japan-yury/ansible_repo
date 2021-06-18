@@ -1,7 +1,0 @@
----
-awx_hostname: "http://awx-web-svc"
-microservice_hostname: "http://<<your_microservice>>"
-# Windows Update & Windows Checker
-awx_api_url: "{{ awx_hostname }}/api/v2/"
-endpoint_job_complete: "{{ gateway_hostname }}/sms/internal/v2/service/job_complete"
-endpoint_metadata: "{{ gateway_hostname }}/sms/internal/v2/service/metadata"
