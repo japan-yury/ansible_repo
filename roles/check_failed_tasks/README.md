@@ -7,7 +7,7 @@ Procedure will extract JobID of the sessions and send status 'FAILED' to microse
 Example Playbook
 ----------------
 ```
-- name: on_failure role
+- name: check_failed_tasks role
   hosts: all
   gather_facts: no
   vars:
