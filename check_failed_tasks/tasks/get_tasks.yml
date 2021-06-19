@@ -80,4 +80,3 @@
   ignore_errors: yes
   with_items: "{{ show_data_for_other_playbooks.msg }}"
   when: show_data_for_other_playbooks.msg is defined
-  

@@ -6,7 +6,6 @@ Procedure will extract JobID of the sessions and send status 'FAILED' to microse
 
 Example Playbook
 ----------------
----
 ```
 - name: on_failure role
   hosts: all
