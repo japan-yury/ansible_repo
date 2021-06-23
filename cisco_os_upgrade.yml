@@ -1,0 +1,260 @@
+#This Playbook is responsible for Cisco IOS upgrade with Vault integration and running by Jenkins job in AWX
+---
+- name: Get the credentials from Vault
+  hosts: all
+  gather_facts: no
+  vars:
+    api_url: "http://vault-service/credential/{{ inventory_hostname }}/?<<some parameter>>"
+    vault_token: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  tasks:
+    - name: Set a Jenkins variable awx_job_id
+      debug:
+        msg: "JENKINS_EXPORT awx_job_id={{ awx_job_id }}"
+
+    - name: Perform API call to endpoint
+      uri:
+        url: "{{ api_url }}"
+        method: GET
+        headers:
+          Vault-Token: "{{ vault_token }}"
+          Content-Type: "application/json"
+        status_code: 200 
+        validate_certs: no
+      delegate_to: localhost
+      ignore_errors: yes
+      register: api_output
+
+    - name: Set fact in_json
+      set_fact:
+        in_json: "{{ api_output }}"
+
+    - name: Failing if credentials could not be found in Vault
+      fail:
+        msg: 'Credentials could not be found in Vault for "{{ inventory_hostname }}"'
+      when: 
+        - in_json.failed == true
+        - in_json.status != '200'
+
+    - name: Setting the username
+      set_fact:
+        vault_user: "{{ api_output.json[0].username }}"
+
+    - name: Setting the password
+      set_fact:
+        vault_password: "{{ api_output.json[0].password }}"
+
+#######################################################
+- name: Prepare and Upgrade routers fireware
+  hosts: all
+  connection: network_cli
+  gather_facts: no
+
+  vars:
+    compliant_ios_version: "{{ jenkins_compliant_IOS }}"
+    ansible_user: "{{ vault_user }}"
+    ansible_password: "{{ vault_password }}"
+    ansible_become: yes
+    ansible_become_method: enable
+    ansible_become_pass: "{{ vault_password }}"
+    ansible_network_os: ios
+    ios_image_file_location_IpAddress: "{{ jenkins_file_location_IpAddress }}"
+    ios_image_file_location: "{{ jenkins_file_location }}"
+    ios_image_file_location_protocol: "{{ jenkins_file_location_protocol }}"
+    ios_image_file_md5_checksum: "{{ jenkins_IOS_MD5 }}"
+    ios_image_file_location_username: "{{ jenkins_file_location_username }}"
+    ios_image_file_location_password: "{{ jenkins_file_location_password }}"
+    
+  tasks:
+    - name: Block for Ping command
+      block:
+        - name: "Check the availability of {{ ios_image_file_location_IpAddress }} file share"
+          net_ping: 
+            dest: '{{ ios_image_file_location_IpAddress }}'
+          register: ping_result
+          ignore_errors: yes
+        
+        - name: Failing because unable to connect to Cisco... Please make sure that SSH is enable on the device
+          fail:
+            msg: "Failing because unable to connect to Cisco... Please make sure that SSH is enable on the device"
+          when: ("'Error reading SSH protocol banner' in ping_result.msg" and ping_result is failed)
+
+        - debug: var=ping_result
+
+        - fail:
+            msg: "Host {{ ios_image_file_location_IpAddress }} is unreachable"
+          when: ping_result.packet_loss != "0%"
+      when: ios_image_file_location_protocol != "ftp://"
+
+    - name: Display full path of file location
+      debug:
+        msg: "File location is {{ jenkins_file_location }} and file name is {{ jenkins_file_location | basename }}"
+  
+    - name: Setting fact for 'ios_image_file'
+      set_fact:
+        ios_image_file: "{{ ios_image_file_location | basename }}"
+
+    #### Actual OS upgrade block
+    - name: Gathering Routers facts
+      ios_facts:
+
+    - name: Enable SCP server and grant privileges
+      ios_config:
+        commands:
+          - "ip scp server enable"
+          - "aaa authorization exec default local if-authenticated"
+      when: 
+        - ansible_net_version != compliant_ios_version
+        - ios_image_file_location_protocol != "ftp://"
+      
+    - name: Setting credentials for ftp
+      ios_config:
+        commands:
+          - "ip ftp username {{ ios_image_file_location_username }}"
+          - "ip ftp password {{ ios_image_file_location_password }}"
+      when:
+        - ansible_net_version != compliant_ios_version
+        - ios_image_file_location_protocol == "ftp://"
+
+    - debug: var=ansible_net_version
+
+    - debug: var=compliant_ios_version
+    
+    - name: Setting file verify auto option to 'No'
+      ios_config:
+        commands:
+          - "no file verify auto"
+      when: ansible_net_version != compliant_ios_version
+      
+    - name: Run show version and check to see if output contains IOS
+      ios_command:
+        commands: show version
+        wait_for: result[0] contains IOS
+      register: cisco_os_version
+    
+    - debug: var=cisco_os_version
+     
+    - debug: var=ios_image_file_location_protocol
+        
+    - name: Upgrading the IOS image if not compliant (via scp/ftp)
+      block:
+        - name: Making a copy of the image to Cisco via scp...It may take up to 40 minutes
+          ios_command:
+            commands:
+              - command: "copy {{ ios_image_file_location_protocol }}{{ ios_image_file_location_username }}:{{ ios_image_file_location_password}}@{{ ios_image_file_location_IpAddress }}://{{ ios_image_file_location }} flash:{{ ios_image_file }}"
+                prompt:
+                  - "Destination filename [{{ ios_image_file }}]?"
+                  - "Do you want to over write? [confirm]"
+                answer:
+                  - "\r"
+                  - "\r"
+            wait_for: result[0] contains bytes copied in
+          when: 
+            - ios_image_file_location_protocol == "scp://"
+          vars:
+            ansible_command_timeout: 2400
+          register: copy_to_cisco_scp
+
+        - name: Making a copy of the image to Cisco via ftp...It may take up to 40 minutes
+          ios_command:
+            commands:
+              - command: "copy {{ ios_image_file_location_protocol }}{{ ios_image_file_location_username }}:{{ ios_image_file_location_password}}@{{ ios_image_file_location_IpAddress }}{{ ios_image_file_location }} flash:{{ ios_image_file }}"
+                prompt:
+                  - "Destination filename [{{ ios_image_file }}]?"
+                  - "%Warning:There is a file already existing with this name"
+                  - "Do you want to over write? [confirm]"
+                answer: 
+                  - "\r"
+                  - "\r"
+            wait_for: result[0] contains copied in
+          when: ios_image_file_location_protocol == "ftp://"
+          vars:
+            ansible_command_timeout: 2400
+          register: copy_to_cisco_ftp
+
+        - name: Check MD5 of downloaded .BIN file
+          ios_command:
+            commands:
+              - "verify /md5 flash:/{{ ios_image_file }}"
+          vars:
+            ansible_command_timeout: 300
+          when: ("'bytes copied' in copy_to_cisco_scp.stdout") or
+                ("'bytes copied' in copy_to_cisco_ftp.stdout")
+          register: md5_checksum_result
+
+        - name: Removing the not needed spaces and symbols in 'md5_checksum_result' using regexp
+          debug: msg="{{ item | regex_findall(regexp) }}"
+          vars:
+            regexp: '\D=\D(................................)'
+          with_items: "{{ md5_checksum_result.stdout_lines }}"
+          register: extracting_md5_value
+
+        - name: Set fact for 'ios_image_file_md5_checksum_uploaded'
+          set_fact:
+            ios_image_file_md5_checksum_uploaded: "{{ extracting_md5_value.results[1].msg[0] }}"
+          when: extracting_md5_value is succeeded
+
+        - name: Set fact for 'ios_image_file_md5_checksum_original'
+          set_fact:
+            ios_image_file_md5_checksum_original: "{{ ios_image_file_md5_checksum }}"
+          when: ios_image_file_md5_checksum is defined
+
+        - name: MD5 checksum provided by the user...
+          debug: 
+            var: ios_image_file_md5_checksum_original
+          when: ios_image_file_md5_checksum_original is defined
+
+        - name: MD5 checksum for uploaded .BIN file...
+          debug: 
+            var: ios_image_file_md5_checksum_uploaded
+          when: ios_image_file_md5_checksum_uploaded is defined
+
+        - name: Failing because MD5 checksum of the downloaded .BIN file does not match or could not be calculated!!!!
+          fail:
+            msg: "Failing because MD5 checksum of the downloaded .BIN file does not match or could not be calculated!!!!"
+          when: (ios_image_file_md5_checksum_uploaded is undefined) or 
+                (ios_image_file_md5_checksum_original is undefined) or
+                (ios_image_file_md5_checksum_uploaded != ios_image_file_md5_checksum_original)
+
+        - name: Setting Boot System Flash
+          ios_config:
+            commands:
+              - "boot system flash:{{ ios_image_file }}"
+          when: (ios_image_file_md5_checksum_uploaded is defined and ios_image_file_md5_checksum_original is defined) and
+                (ios_image_file_md5_checksum_uploaded == ios_image_file_md5_checksum_original)
+          register: set_flash_result
+
+        - name: Saving config
+          ios_config:
+            save_when: modified
+          when: set_flash_result is succeeded
+
+        - name: Rebooting the router
+          ios_command:
+            commands:
+              - "reload in 1\ny"
+          when: set_flash_result is succeeded
+
+        - name: Sleep for 40 minutes to wait until Cisco will boot up and continue with play
+          wait_for: timeout=2400
+          delegate_to: localhost
+
+        - name: Waiting for the reouter to return
+          wait_for:
+            host: "{{ inventory_hostname }}"
+            port: 22
+            delay: 240
+          delegate_to: localhost
+
+        - name: GAathering routers facts for validation
+          ios_facts:
+
+      when: ansible_net_version != compliant_ios_version
+        
+    - name: Checking the the IOS version match
+      assert:
+        that:
+          - compliant_ios_version == ansible_net_version

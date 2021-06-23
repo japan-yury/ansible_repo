@@ -1,0 +1,171 @@
+#This Playbook is enabling SSH on cisco switch and checking the SSH connection once enabled and running by Jenkins job in AWX
+---
+- name: Get the credentials from Vault
+  hosts: all
+  gather_facts: no
+  vars:
+    api_url: "http://vault-service/credential/{{ inventory_hostname }}/?<<some parameter>>"
+    vault_token: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  tasks:
+    - name: Set a Jenkins variable awx_job_id
+      debug:
+        msg: "JENKINS_EXPORT awx_job_id={{ awx_job_id }}"
+
+    - name: Identifying the current Cisco user in Vault
+      uri:
+        url: "{{ api_url }}"
+        method: GET
+        headers:
+          Vault-Token: "{{ vault_token }}"
+          Content-Type: "application/json"
+        status_code: 200 
+        validate_certs: no
+      delegate_to: localhost
+      ignore_errors: yes
+      register: api_output
+
+    - name: Setting the output for extracted user's details for Cisco found in Vault
+      set_fact:
+        in_json: "{{ api_output }}"
+      when: api_output is succeeded
+      no_log: true
+
+    - name: Failing then credentials could not be found in Vault
+      debug:
+        msg: "Credentials could not be found in Vault for {{ inventory_hostname }}"
+      when: 
+        - in_json.failed == true
+        - in_json.status != '200'
+
+    - name: Setting the username for Cisco extracted from Vault
+      set_fact:
+        vault_user: "{{ api_output.json[0].username }}"
+      when: api_output is succeeded and api_output.json != []
+
+    - name: Setting the password for Cisco extracted from Vault
+      set_fact:
+        vault_password: "{{ api_output.json[0].password }}"
+      when: api_output is succeeded and api_output.json != []
+      no_log: true
+
+#######################################################
+- name: Run Telnet check and SSH enable blocks (first try)
+  hosts: all
+  gather_facts: false
+  connection: local
+  serial: 1
+  vars:
+    ansible_user: "{{ jenkins_cisco_telnet_username }}"
+    ansible_password_1: "{{ jenkins_cisco_telnet_password }}"
+    ansible_password_2: "{{ jenkins_cisco_ssh_password }}"
+
+  tasks:
+    - name: SSH enabling on Cisco block
+      telnet:
+        user: "{{ ansible_user }}"
+        password: "{{ ansible_password_1 }}"
+        login_prompt: "Password: "
+        prompts:
+          - "[>|#|:]"
+        command:
+          - enable
+          - "{{ ansible_password_2 }}"
+          - conf t
+          - ip domain-name <<xxx>>
+          - crypto key generate rsa general-keys label ssh modulus 2048
+          - ip ssh version 2
+          - aaa new-model
+          - aaa authentication login default local
+          - "username {{ ansible_user }} privilege 15 password 0 {{ ansible_password_2 }}"
+          - line vty 5 15
+          - transport input ssh
+          - login authentication default
+          - exit
+          - exit
+          - exit
+      register: result
+      ignore_errors: yes
+
+    - name: Reading the errors...
+      debug: 
+        msg: "It seems that ssh is enabled on Cisco...checking additionally"
+      when: ("'telnet connection closed' in result.msg" and result is failed)
+      ignore_errors: yes
+
+- name: Run Telnet check and SSH enable blocks (second try)
+  hosts: all
+  gather_facts: false
+  serial: 1
+  vars:
+    ansible_user: "{{ jenkins_cisco_telnet_username }}"
+    ansible_password_1: "{{ jenkins_cisco_telnet_password }}"
+    ansible_password_2: "{{ jenkins_cisco_ssh_password }}"
+
+  tasks:
+    - name: SSH enabling on Cisco block (second try)
+      telnet:
+        user: "{{ ansible_user }}"
+        password: "{{ ansible_password_1 }}"
+        login_prompt: "Username: "
+        prompts:
+          - "[>|#|:]"
+        command:
+          - enable
+          - "{{ ansible_password_2 }}"
+          - conf t
+          - ip domain-name <<xxx>>
+          - crypto key generate rsa general-keys label ssh modulus 2048
+          - ip ssh version 2
+          - aaa new-model
+          - aaa authentication login default local
+          - "username {{ ansible_user }} privilege 15 password 0 {{ ansible_password_2 }}"
+          - line vty 5 15
+          - transport input ssh
+          - login authentication default
+          - exit
+          - exit
+          - exit
+      register: result_second
+      ignore_errors: yes
+      when: ("'telnet connection closed' in result.msg" and result is failed)
+
+    - name: Reading the errors...
+      debug: 
+        msg: "It seems that ssh is enabled on Cisco...checking additionally"
+      when: ("'telnet connection closed' in result_second.msg" and result_second is failed)
+      ignore_errors: yes
+
+- name: Run SSH check block
+  hosts: all
+  connection: network_cli
+  gather_facts: false
+  vars:
+    ansible_user: "{{ jenkins_cisco_telnet_username }}"
+    ansible_password: "{{ jenkins_cisco_ssh_password }}"
+    ansible_become: yes
+    ansible_become_method: enable
+    ansible_become_pass: "{{ jenkins_cisco_ssh_password }}"
+    ansible_network_os: ios
+
+  tasks:
+    - name: Run SSH check procedure
+      ios_command:
+        commands: 
+          - show ip ssh | inc Enabled
+      register: ssh_enabled_check
+      ignore_errors: yes
+
+    - name: Failing because unable to connect via telnet...
+      fail:
+        msg: "Failing because unable to connect via telnet..."
+      when: ("'Error reading SSH protocol banner' in ssh_enabled_check.msg" and ssh_enabled_check is failed)
+  
+    - name: Message out the SSH enable check procedure
+      debug: 
+        msg: "SSH is enabled on the device"
+      changed_when: (ssh_enabled_check.stdout is defined and "'SSH Enabled' in ssh_enabled_check.stdout")
+      ignore_errors: yes
