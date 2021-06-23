@@ -6,8 +6,8 @@ I'm happy to share some code and I really hope that it will save some time for t
 Repo has the following roles, playbooks:
 
 * check_failed_tasks (Role)
-* cisco ssh enable (playbook)
-* cisco IOS upgrade (playbook)
+* cisco_enable_ssh (playbook)
+* cisco_os_upgrade (playbook)
 
 check_failed_tasks Role
 =========
@@ -30,8 +30,8 @@ These two playbooks where developed for simplifying Cisco devices management.
 The following playbooks are running by Jenkins job and AWX plugin used there to put the task on directly to AWX for one or another playbooks.
 
 ```
-* cisco ssh enable
-* cisco IOS upgrade
+* cisco_enable_ssh
+* cisco_os_upgrade
 ```
 
 
