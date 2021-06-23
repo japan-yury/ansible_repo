@@ -27,7 +27,7 @@ Example Playbook
 ```
 
 These two playbooks where developed for simplifying Cisco management.
-The following playbooks are running by Jenkins job and AWX plugin used there to put the task on directly for one or another playbooks.
+The following playbooks are running by Jenkins job and AWX plugin used there to put the task on AWX directly for one or another playbooks.
 
 ```
 * cisco ssh enable
