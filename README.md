@@ -29,8 +29,8 @@ Example Playbook
 This two playbooks where developed for simplifying Cisco management.
 
 ```
-- cisco ssh enable
-- cisco IOS upgrade
+* cisco ssh enable
+* cisco IOS upgrade
 ```
 
 
